@@ -472,7 +472,7 @@ function SiteHeader({ data }: { data: BootstrapData }) {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/92 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4 py-3">
           <a href="/" className="flex min-w-0 items-center gap-3">
@@ -2497,7 +2497,7 @@ function SiteFooter({ data }: { data: BootstrapData }) {
   ];
 
   return (
-    <footer className="bg-[#092b5c] px-4 py-12 text-white sm:px-6 lg:px-8">
+    <footer className="bg-[#092b5c] px-4 pb-32 pt-12 text-white sm:px-6 lg:px-8 lg:pb-12">
       <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2 lg:grid-cols-[1.2fr_0.8fr_0.9fr_0.9fr_1fr]">
         <div>
           <img src={logoImage} alt="Gauranitai logo" className="mb-4 h-14 w-14 rounded-full bg-white object-contain" />
@@ -2549,7 +2549,7 @@ function SiteFooter({ data }: { data: BootstrapData }) {
           <p className="text-sm leading-7 text-slate-200">{data.settings.contact.address}</p>
         </div>
       </div>
-      <div className="mx-auto mt-10 flex max-w-7xl flex-col gap-3 border-t border-white/10 pt-6 text-sm text-slate-300 md:flex-row md:items-center md:justify-between">
+      <div className="mx-auto mt-10 flex max-w-7xl flex-col gap-3 break-words border-t border-white/10 pt-6 text-sm text-slate-300 [overflow-wrap:anywhere] md:flex-row md:items-center md:justify-between">
         <span>Copyright Gauranitai. All rights reserved.</span>
         <span className="text-slate-400">Professional marble polishing, floor cleaning, and Lizonex cleaner products.</span>
       </div>
@@ -2560,7 +2560,7 @@ function SiteFooter({ data }: { data: BootstrapData }) {
 function FloatingActions({ settings }: { settings: SiteSettings }) {
   return (
     <>
-      <a href={whatsappLink(settings)} className="gauranitai-soft-pulse fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-2xl shadow-emerald-950/25 lg:bottom-6" aria-label="WhatsApp Gauranitai">
+      <a href={whatsappLink(settings)} className="gauranitai-soft-pulse fixed bottom-6 right-4 z-50 hidden h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-2xl shadow-emerald-950/25 lg:flex" aria-label="WhatsApp Gauranitai">
         <MessageCircle className="h-6 w-6" />
       </a>
       <div className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-2 border-t border-slate-200 bg-white p-2 lg:hidden">
@@ -2577,7 +2577,7 @@ function FloatingActions({ settings }: { settings: SiteSettings }) {
 
 function PageShell({ data, children }: { data: BootstrapData; children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#f7f9fb] text-slate-900">
+    <div className="min-h-screen bg-[#f7f9fb] pb-24 text-slate-900 lg:pb-0">
       <SiteHeader data={data} />
       {children}
       <SiteFooter data={data} />
@@ -3180,16 +3180,20 @@ function MyAccountPage({ data }: { data: BootstrapData }) {
         />
         <section className="px-4 py-14 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
               <h2 className="text-xl font-black text-slate-900">{customer ? "Customer Profile" : "Customer Login"}</h2>
               {checking ? (
                 <p className="mt-5 rounded-2xl bg-[#f7f9fb] p-5 text-sm font-semibold text-slate-500">Checking login...</p>
               ) : customer ? (
                 <div className="mt-5 grid gap-4">
-                  <div className="rounded-2xl bg-[#f7f9fb] p-4">
+                  <div className="min-w-0 overflow-hidden rounded-2xl bg-[#f7f9fb] p-4">
                     <p className="text-sm font-bold text-slate-500">Logged in as</p>
-                    <p className="mt-1 text-xl font-black text-[#0d3e83]">{customer.name}</p>
-                    <p className="mt-1 text-sm text-slate-600">{customer.phone || "-"} | {customer.email || "-"}</p>
+                    <p className="mt-1 break-words text-lg font-black uppercase leading-tight text-[#0d3e83] [overflow-wrap:anywhere] sm:text-xl">{customer.name}</p>
+                    <div className="mt-2 flex min-w-0 flex-col gap-1 text-sm text-slate-600 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+                      <span className="break-all">{customer.phone || "-"}</span>
+                      <span className="hidden text-slate-300 sm:inline">|</span>
+                      <span className="break-all">{customer.email || "-"}</span>
+                    </div>
                   </div>
                   <button type="button" onClick={loadOrders} className="rounded-full bg-[#0d3e83] px-5 py-3 text-sm font-bold text-white">Refresh Order History</button>
                   <button type="button" onClick={logoutCustomer} className="rounded-full border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700">Logout</button>
@@ -3213,9 +3217,9 @@ function MyAccountPage({ data }: { data: BootstrapData }) {
                 {customer && orders.map((order) => (
                   <article key={order.id} className="rounded-2xl border border-slate-200 bg-[#fbfcfe] p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-black text-slate-900">{order.orderNumber}</p>
-                        <p className="mt-1 text-sm text-slate-500">{order.customerName} | {order.phone}</p>
+                      <div className="min-w-0">
+                        <p className="break-all font-black text-slate-900">{order.orderNumber}</p>
+                        <p className="mt-1 break-words text-sm text-slate-500 [overflow-wrap:anywhere]">{order.customerName} | {order.phone}</p>
                       </div>
                       <OrderStatusBadge status={order.orderStatus} />
                     </div>
@@ -3352,7 +3356,7 @@ function CustomerChatPanel({ customer }: { customer: CustomerSession }) {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="font-black text-slate-900">Website Chat</p>
@@ -3360,11 +3364,11 @@ function CustomerChatPanel({ customer }: { customer: CustomerSession }) {
         </div>
         <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">{thread?.status || "Open"}</span>
       </div>
-      <div ref={messagesRef} className="mt-4 flex h-64 flex-col gap-3 overflow-auto rounded-2xl bg-[#f7f9fb] p-3">
+      <div ref={messagesRef} className="mt-4 flex h-64 flex-col gap-3 overflow-auto overflow-x-hidden rounded-2xl bg-[#f7f9fb] p-3">
         {messages.map((chatMessage) => (
           <div key={chatMessage.id} className={`max-w-[86%] rounded-2xl p-3 text-sm shadow-sm ${chatMessage.senderType === "user" ? "ml-auto bg-[#0d3e83] text-white" : "bg-white text-slate-700"}`}>
             <p className="text-xs font-black opacity-75">{chatMessage.senderName}</p>
-            <p className="mt-1 leading-6">{chatMessage.message}</p>
+            <p className="mt-1 break-words leading-6 [overflow-wrap:anywhere]">{chatMessage.message}</p>
           </div>
         ))}
         {!messages.length && <p className="m-auto text-center text-sm font-semibold text-slate-500">Start a conversation with admin.</p>}
@@ -3393,7 +3397,7 @@ function CustomerChatWidget() {
 
   if (!customer) {
     return (
-      <a href="/my-account" className="fixed bottom-24 right-5 z-50 inline-flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-black text-[#0d3e83] shadow-xl shadow-blue-950/10 ring-1 ring-slate-200">
+      <a href="/my-account" className="fixed bottom-24 right-4 z-50 inline-flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-black text-[#0d3e83] shadow-xl shadow-blue-950/10 ring-1 ring-slate-200 lg:right-5">
         <MessageCircle className="h-4 w-4" /> Login to chat
       </a>
     );

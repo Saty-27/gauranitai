@@ -7128,17 +7128,17 @@
     {
       "id": 2,
       "customerKey": "phone:8928794211",
-      "customerName": "Satyam Gupta",
+      "customerName": "Satyam",
       "phone": "8928794211",
-      "email": "sg639502@gmail.com",
-      "isLoggedIn": false,
+      "email": "infotosatyamgupta@gmail.com",
+      "isLoggedIn": true,
       "isBlocked": false,
       "blockReason": "",
       "adminNotes": "",
-      "lastLoginAt": "",
+      "lastLoginAt": "2026-06-28T07:32:15.698Z",
       "lastLogoutAt": "",
       "createdAt": "2026-06-26T12:33:56.292Z",
-      "updatedAt": "2026-06-26T12:33:56.292Z"
+      "updatedAt": "2026-06-28T07:32:15.699Z"
     },
     {
       "id": 1,
@@ -7207,7 +7207,7 @@
       "unreadForAdmin": 0,
       "unreadForUser": 0,
       "createdAt": "2026-06-25T12:29:36.577Z",
-      "updatedAt": "2026-06-26T10:16:02.874Z"
+      "updatedAt": "2026-06-28T07:35:54.014Z"
     }
   ],
   "chatMessages": [
