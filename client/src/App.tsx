@@ -299,6 +299,7 @@ function videoWatchUrl(video: VideoItem) {
 }
 
 type LocalCartItem = { productId: number; quantity: number };
+const CUSTOMER_SESSION_STORAGE_KEY = "gauranitai-remembered-customer";
 
 function readCart(): LocalCartItem[] {
   try {
@@ -322,6 +323,32 @@ function addToCart(productId: number, quantity = 1) {
     items.push({ productId, quantity });
   }
   writeCart(items);
+}
+
+function readRememberedCustomer(): CustomerSession | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CUSTOMER_SESSION_STORAGE_KEY) || "null");
+    if (!raw || (!raw.phone && !raw.email)) return null;
+    return {
+      name: String(raw.name || "Customer"),
+      phone: String(raw.phone || ""),
+      email: String(raw.email || ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function rememberCustomer(customer: CustomerSession | null) {
+  if (!customer) {
+    localStorage.removeItem(CUSTOMER_SESSION_STORAGE_KEY);
+    return;
+  }
+  localStorage.setItem(CUSTOMER_SESSION_STORAGE_KEY, JSON.stringify({
+    name: customer.name || "Customer",
+    phone: customer.phone || "",
+    email: customer.email || "",
+  }));
 }
 
 function money(value: number) {
@@ -2558,11 +2585,15 @@ function SiteFooter({ data }: { data: BootstrapData }) {
 }
 
 function FloatingActions({ settings }: { settings: SiteSettings }) {
+  const path = typeof window !== "undefined" ? window.location.pathname : "";
+  const showDesktopWhatsapp = !path.startsWith("/my-account");
   return (
     <>
-      <a href={whatsappLink(settings)} className="gauranitai-soft-pulse fixed bottom-6 right-4 z-50 hidden h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-2xl shadow-emerald-950/25 lg:flex" aria-label="WhatsApp Gauranitai">
-        <MessageCircle className="h-6 w-6" />
-      </a>
+      {showDesktopWhatsapp && (
+        <a href={whatsappLink(settings)} className="gauranitai-soft-pulse fixed bottom-6 right-4 z-50 hidden h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-2xl shadow-emerald-950/25 lg:flex" aria-label="WhatsApp Gauranitai">
+          <MessageCircle className="h-6 w-6" />
+        </a>
+      )}
       <div className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-2 border-t border-slate-200 bg-white p-2 lg:hidden">
         <a href={phoneLink(settings)} className="flex items-center justify-center gap-2 rounded-full bg-[#0d3e83] px-4 py-3 text-sm font-bold text-white">
           <Phone className="h-4 w-4" /> Call Now
@@ -3137,12 +3168,38 @@ function MyAccountPage({ data }: { data: BootstrapData }) {
   }
 
   useEffect(() => {
+    const remembered = readRememberedCustomer();
+    if (remembered) {
+      setLogin((current) => ({
+        ...current,
+        name: current.name || remembered.name,
+        phone: current.phone || remembered.phone,
+        email: current.email || remembered.email,
+      }));
+    }
     api<{ customer: CustomerSession | null }>("/api/customer/me")
       .then(async (value) => {
-        setCustomer(value.customer);
-        if (value.customer) await loadOrders();
+        if (value.customer) {
+          rememberCustomer(value.customer);
+          setCustomer(value.customer);
+          await loadOrders();
+          return;
+        }
+        if (remembered) {
+          const restored = await api<{ customer: CustomerSession }>("/api/customer/login", {
+            method: "POST",
+            body: JSON.stringify(remembered),
+          });
+          rememberCustomer(restored.customer);
+          setCustomer(restored.customer);
+          window.dispatchEvent(new Event("gauranitai-customer-updated"));
+          await loadOrders();
+        }
       })
-      .catch(() => setCustomer(null))
+      .catch(() => {
+        rememberCustomer(null);
+        setCustomer(null);
+      })
       .finally(() => setChecking(false));
   }, []);
 
@@ -3153,7 +3210,14 @@ function MyAccountPage({ data }: { data: BootstrapData }) {
         method: "POST",
         body: JSON.stringify(login),
       });
+      rememberCustomer(value.customer);
       setCustomer(value.customer);
+      setLogin((current) => ({
+        ...current,
+        name: value.customer.name || current.name,
+        phone: value.customer.phone || current.phone,
+        email: value.customer.email || current.email,
+      }));
       window.dispatchEvent(new Event("gauranitai-customer-updated"));
       await loadOrders();
     } catch (err: any) {
@@ -3163,6 +3227,7 @@ function MyAccountPage({ data }: { data: BootstrapData }) {
 
   async function logoutCustomer() {
     await api<{ success: boolean }>("/api/customer/logout", { method: "POST" });
+    rememberCustomer(null);
     setCustomer(null);
     setOrders([]);
     window.dispatchEvent(new Event("gauranitai-customer-updated"));
@@ -3568,9 +3633,36 @@ function CheckoutPage({ data }: { data: BootstrapData }) {
   }, [form.couponCode]);
 
   useEffect(() => {
+    const remembered = readRememberedCustomer();
+    if (remembered) {
+      setForm((current) => ({
+        ...current,
+        customerName: current.customerName || remembered.name,
+        phone: current.phone || remembered.phone,
+        email: current.email || remembered.email,
+      }));
+    }
     api<{ customer: CustomerSession | null }>("/api/customer/me")
-      .then((value) => setCustomer(value.customer))
-      .catch(() => setCustomer(null))
+      .then(async (value) => {
+        if (value.customer) {
+          rememberCustomer(value.customer);
+          setCustomer(value.customer);
+          return;
+        }
+        if (remembered) {
+          const restored = await api<{ customer: CustomerSession }>("/api/customer/login", {
+            method: "POST",
+            body: JSON.stringify(remembered),
+          });
+          rememberCustomer(restored.customer);
+          setCustomer(restored.customer);
+          window.dispatchEvent(new Event("gauranitai-customer-updated"));
+        }
+      })
+      .catch(() => {
+        rememberCustomer(null);
+        setCustomer(null);
+      })
       .finally(() => setCustomerLoading(false));
   }, []);
 
@@ -3595,6 +3687,7 @@ function CheckoutPage({ data }: { data: BootstrapData }) {
           email: form.email,
         }),
       });
+      rememberCustomer(value.customer);
       setCustomer(value.customer);
       window.dispatchEvent(new Event("gauranitai-customer-updated"));
       setMessage("Login verified. You can place the order now.");
@@ -4450,10 +4543,13 @@ function DetailList({ title, items }: { title: string; items: string[] }) {
 }
 
 function TextInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+  const lowerLabel = label.toLowerCase();
+  const inputMode = lowerLabel.includes("phone") || lowerLabel.includes("number") || lowerLabel.includes("pincode") ? "tel" : undefined;
+  const autoComplete = lowerLabel.includes("email") ? "email" : lowerLabel.includes("phone") ? "tel" : lowerLabel.includes("name") ? "name" : undefined;
   return (
     <label className="grid gap-2 text-sm font-bold text-slate-700">
       {label}
-      <input className="rounded-xl border border-slate-200 bg-white px-4 py-3 font-medium outline-none focus:border-[#0d3e83]" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
+      <input type="text" inputMode={inputMode} autoComplete={autoComplete} className="rounded-xl border border-slate-200 bg-white px-4 py-3 font-medium outline-none focus:border-[#0d3e83]" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
     </label>
   );
 }
