@@ -15,8 +15,10 @@ import {
   Leaf,
   Menu,
   MessageCircle,
+  Minus,
   Phone,
   Play,
+  Plus,
   Save,
   Search,
   ShieldCheck,
@@ -323,6 +325,94 @@ function addToCart(productId: number, quantity = 1) {
     items.push({ productId, quantity });
   }
   writeCart(items);
+}
+
+function clampQuantity(value: number, min = 1, max?: number) {
+  const lower = Math.max(1, Math.floor(min || 1));
+  const upper = typeof max === "number" && max > 0 ? Math.floor(max) : undefined;
+  const numeric = Number.isFinite(value) ? Math.floor(value) : lower;
+  return Math.min(upper ?? numeric, Math.max(lower, numeric));
+}
+
+function QuantityStepper({
+  value,
+  onChange,
+  min = 1,
+  max,
+  ariaLabel = "Quantity",
+  className = "",
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  ariaLabel?: string;
+  className?: string;
+}) {
+  const safeValue = clampQuantity(value, min, max);
+  const [draft, setDraft] = useState(String(safeValue));
+
+  useEffect(() => {
+    setDraft(String(safeValue));
+  }, [safeValue]);
+
+  function commit(nextValue: string) {
+    const parsed = Number(nextValue);
+    const next = clampQuantity(parsed, min, max);
+    setDraft(String(next));
+    onChange(next);
+  }
+
+  function updateDraft(nextValue: string) {
+    const digits = nextValue.replace(/[^\d]/g, "");
+    setDraft(digits);
+    if (digits) commit(digits);
+  }
+
+  function step(delta: number) {
+    const next = clampQuantity(safeValue + delta, min, max);
+    setDraft(String(next));
+    onChange(next);
+  }
+
+  const isAtMin = safeValue <= clampQuantity(min, min, max);
+  const isAtMax = typeof max === "number" && max > 0 && safeValue >= max;
+
+  return (
+    <div className={`inline-flex h-12 min-w-[150px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}>
+      <button
+        type="button"
+        onClick={() => step(-1)}
+        disabled={isAtMin}
+        className="grid w-11 place-items-center border-r border-slate-200 text-[#0d3e83] transition hover:bg-slate-50 disabled:text-slate-300"
+        aria-label={`Decrease ${ariaLabel.toLowerCase()}`}
+      >
+        <Minus className="h-4 w-4" />
+      </button>
+      <input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={draft}
+        onChange={(event) => updateDraft(event.target.value)}
+        onBlur={() => commit(draft)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+        }}
+        aria-label={ariaLabel}
+        className="min-w-0 flex-1 bg-white px-2 text-center text-lg font-black text-slate-900 outline-none"
+      />
+      <button
+        type="button"
+        onClick={() => step(1)}
+        disabled={isAtMax}
+        className="grid w-11 place-items-center border-l border-slate-200 text-[#0d3e83] transition hover:bg-slate-50 disabled:text-slate-300"
+        aria-label={`Increase ${ariaLabel.toLowerCase()}`}
+      >
+        <Plus className="h-4 w-4" />
+      </button>
+    </div>
+  );
 }
 
 function readRememberedCustomer(): CustomerSession | null {
@@ -3544,9 +3634,10 @@ function CartPage({ data }: { data: BootstrapData }) {
   const lowerDeliverySlab = deliverySlabStart(deliverySettings);
   const estimatedDelivery = estimatedDeliveryCharge(subtotal, deliverySettings);
 
-  function updateQuantity(productId: number, quantity: number) {
+  function updateQuantity(productId: number, quantity: number, maxQuantity?: number) {
+    const safeQuantity = clampQuantity(quantity, 1, maxQuantity);
     const next = items
-      .map((item) => (item.productId === productId ? { ...item, quantity: Math.max(1, quantity) } : item))
+      .map((item) => (item.productId === productId ? { ...item, quantity: safeQuantity } : item))
       .filter((item) => item.quantity > 0);
     setItems(next);
     writeCart(next);
@@ -3575,9 +3666,9 @@ function CartPage({ data }: { data: BootstrapData }) {
                     <p className="mt-1 text-sm text-slate-500">GST estimate: {money(product.discountPrice * item.quantity * (product.gstPercentage / 100))}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <input className="w-20 rounded-xl border border-slate-200 px-3 py-2 font-bold" type="number" min={1} max={product.stock} value={item.quantity} onChange={(event) => updateQuantity(product.id, Number(event.target.value))} />
-                  <button onClick={() => remove(product.id)} className="rounded-full bg-red-50 px-4 py-2 text-sm font-bold text-red-600">Remove</button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <QuantityStepper value={item.quantity} max={product.stock} onChange={(quantity) => updateQuantity(product.id, quantity, product.stock)} ariaLabel={`${product.name} quantity`} />
+                  <button type="button" onClick={() => remove(product.id)} className="rounded-full bg-red-50 px-4 py-2 text-sm font-bold text-red-600">Remove</button>
                 </div>
               </div>
             ))}
@@ -4230,11 +4321,8 @@ function DetailPage({ data, detail }: { data: BootstrapData; detail: { type: str
                   </div>
                 </div>
 
-                <div className="mt-7 grid min-w-0 gap-3 sm:grid-cols-[150px_minmax(190px,1fr)_minmax(130px,0.8fr)]">
-                  <label className="flex h-14 min-w-0 items-center justify-between gap-4 rounded-full border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700">
-                    Qty
-                    <input className="w-16 bg-transparent text-center font-black outline-none" type="number" min={1} max={product.stock} value={quantity} onChange={(event) => setQuantity(Math.min(product.stock, Math.max(1, Number(event.target.value) || 1)))} />
-                  </label>
+                <div className="mt-7 grid min-w-0 gap-3 sm:grid-cols-[170px_minmax(190px,1fr)_minmax(130px,0.8fr)]">
+                  <QuantityStepper value={quantity} max={product.stock} onChange={setQuantity} ariaLabel={`${product.name} quantity`} className="h-14 rounded-full" />
                   <button
                     type="button"
                     disabled={product.stock <= 0}
@@ -4471,7 +4559,7 @@ function DetailPage({ data, detail }: { data: BootstrapData; detail: { type: str
                 <>
                   <label className="flex min-h-12 flex-none items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700">
                     Qty
-                    <input className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-center font-bold" type="number" min={1} max={row.stock} value={quantity} onChange={(event) => setQuantity(Math.min(row.stock, Math.max(1, Number(event.target.value) || 1)))} />
+                    <QuantityStepper value={quantity} max={row.stock} onChange={setQuantity} ariaLabel={`${title} quantity`} className="h-10 min-w-[128px] rounded-full shadow-none" />
                   </label>
                   <button
                     type="button"
